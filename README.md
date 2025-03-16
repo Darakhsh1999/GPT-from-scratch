@@ -1,4 +1,4 @@
-# GPT-from-scratch
+# `Generative Pretrained Transformer (GPT)` from scratch
 
 Implementing `Generative Pretrained Transformer (GPT)` from scratch with limited external ML libraries usage:
 - PyTorch for training loop and model architecture
