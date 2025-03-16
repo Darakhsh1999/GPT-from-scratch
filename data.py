@@ -1,55 +1,51 @@
+import os
 import torch
-import data_utils
-import numpy as np
-from tokenizer import Tokenizer
+import tiktoken
+from time import time
+from model import GPTConfig
 from torch.utils.data import Dataset, DataLoader
 
 
 class TextData(Dataset):
 
-    def __init__(self, text, vocab, config):
-        self.tokenizer = Tokenizer(vocab=vocab)
-        self.data = torch.tensor(self.tokenizer.encode(text), dtype=torch.long)
+    def __init__(self, data_path, config: GPTConfig, verbose=False, benchmark=False):
+
+        with open(data_path, "r", encoding="utf-8") as f:
+            self.text = f.read()
+        self.tokenizer = tiktoken.get_encoding("gpt2")
+        t = time()
+        self.text_tokens = torch.Tensor(self.tokenizer.encode(text=self.text)).type(torch.LongTensor)
+        if benchmark: print(f"Tokenizing text took {time()-t:.2f} s")
         self.config = config
+
+        self.n = len(self.text_tokens) // (1+self.config.context_size) 
+
+        if verbose: print(f"Text consists of {len(self.text_tokens)} tokens, approx {self.n} batches")
     
-    def __len__(self):
-        return len(self.data)-self.config["batch_size"]
+
+    def decode(self, token_ids):
+        return [self.tokenizer.decode(token_id) for token_id in token_ids]
+
 
     def __getitem__(self, idx):
-        x = self.data[idx:idx+self.config["block_size"]]
-        y = self.data[idx+1:idx+self.config["block_size"]+1]
+        start_idx = idx*(1+self.config.context_size)
+        x = self.text_tokens[start_idx:start_idx+self.config.context_size]
+        y = self.text_tokens[1+start_idx:1+start_idx+self.config.context_size]
         return (x,y)
-    
-    def get_example(self, n=3):
-        indices = np.random.choice(len(self.data)-self.config["batch_size"], size=n, replace=False)
-        for idx in indices:
-            x,y = self.__getitem__(idx)
-            print(f"x =",x)
-            print(f"y =",y)
-            print(5*"---")
 
+    def __len__(self):
+        return self.n
 
 
 if __name__ == "__main__":
 
-    text = data_utils.load_text()
-    vocab = data_utils.get_characters_from_text(text)
-    config = {
-        "block_size": 8,
-        "batch_size": 4,
-    }
+    data_path = os.path.join("..","data","txt","1984.txt")
+    config = GPTConfig()
+    data = TextData(data_path=data_path, config=config, verbose=True)
 
-    dataset = TextData(text, vocab, config)
-    #dataset.get_example(3)
+    data_loader = DataLoader(data, batch_size=2, drop_last=True, shuffle=False)
+    data_iter = iter(data_loader)
 
-
-    dataloader = DataLoader(dataset, batch_size=config["batch_size"], shuffle=False)
-
-    for batch_idx, (x,y) in enumerate(dataloader):
-        if batch_idx == 3: break
-        print(f"x =",x)
-        print(f"y =",y)
-        print(5*"---")
-    
-
-        
+    for _ in range(1):
+        x,y = next(data_iter)
+        print(x.shape, y.shape)

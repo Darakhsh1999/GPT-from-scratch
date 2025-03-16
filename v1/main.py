@@ -9,15 +9,25 @@ from torch.optim import AdamW
 from train import train_transformer
 from torch.utils.data import Subset,  DataLoader
 
+config = {
+    "block_size": 256,
+    "batch_size": 64,
+    "n_epochs": 10,
+    "n_heads": 6,
+    "d_embed": 256,
+    "n_layers": 4,
+    "lr": 1e-3,
+    "device": "cuda" if torch.cuda.is_available() else "cpu"
+}
 
 # Hyperparameters
 config = {
     "block_size": 8,
     "batch_size": 16,
     "n_epochs": 10,
-    "head_size": 16,
     "n_heads": 4,
     "d_embed": 64,
+    "n_layers": 3,
     "lr": 1e-3,
     "device": "cuda" if torch.cuda.is_available() else "cpu"
 }
